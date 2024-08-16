@@ -1,24 +1,123 @@
 from enum import Enum
 
-class RomType(Enum):
-    NES = 1
-    SNES = 2
-    N64 = 3
+
+class RomDataType(Enum):
+    BIN = 1
+    ZIP = 2
+    RAR = 3
+    _7Z = 4
+    ISO = 5
+    CSO = 6
+    CUE = 7
+    CHD = 8
+
+
+class ConsoleType(Enum):
+    GW = 0
+    PM = 1
+    GB = 2
+    GBC = 3
     GBA = 4
-    GBC = 5
-    GB = 6
-    GEN = 7
-    SMS = 8
-    GG = 9
-    PSX = 10
-    PS2 = 11
-    PSP = 12
-    DC = 13
-    WII = 14
-    WIIU = 15
-    GC = 16
-    DS = 17
-    _3DS = 18
-    XBOX = 21
-    SWITCH = 22
-    OTHER = 23
+    NDS = 5
+    _3DS = 6
+    NS = 7
+    NES = 8
+    SNES = 9
+    N64 = 10
+    GC = 11
+    WII = 12
+    WIIU = 13
+
+    PSX = 14
+    PS2 = 15
+    PSP = 16
+    PSV = 17
+
+    MD = 18
+    ST = 19
+    DC = 20
+    GG = 21
+
+    ARCADE = 22
+
+    OTHER = 99
+
+
+CONSOLE_NAME_MAP = {
+    # Nintendo
+    ConsoleType.GW: "Nintendo - Game & Watch",
+    ConsoleType.PM: "Nintendo - Pokemon Mini",
+    ConsoleType.GB: "Nintendo - Game Boy",
+    ConsoleType.GBC: "Nintendo - Game Boy Color",
+    ConsoleType.GBA: "Nintendo - Game Boy Advance",
+    ConsoleType.NDS: "Nintendo - Nintendo DS",
+    ConsoleType._3DS: "Nintendo - Nintendo 3DS",
+    ConsoleType.NS: "Nintendo - Nintendo Switch",
+    ConsoleType.NES: "Nintendo - Nintendo Entertainment System",  # gen 3
+    ConsoleType.SNES: "Nintendo - Super Nintendo Entertainment System",  # gen 4
+    ConsoleType.N64: "Nintendo - Nintendo 64",  # gen 5
+    ConsoleType.GC: "Nintendo - Nintendo GameCube",  # gen 6
+    ConsoleType.WII: "Nintendo - Nintendo Wii",  # gen 7
+    ConsoleType.WIIU: "Nintendo - Nintendo Wii U",  # gen 8
+    # Sony
+    ConsoleType.PSX: "Sony - Sony PlayStation",  # gen 5
+    ConsoleType.PS2: "Sony - Sony PlayStation 2",  # gen 6
+    ConsoleType.PSP: "Sony - Sony PlayStation Portable",
+    ConsoleType.PSV: "Sony - Sony PlayStation Vita",
+    # Sega
+    ConsoleType.MD: "Sega - Mega Drive - Genesis",  # gen 4
+    ConsoleType.ST: "Sega - Saturn",  # gen 5
+    ConsoleType.DC: "Sega - Dreamcast",  # gen 6
+    ConsoleType.GG: "Sega - Game Gear",
+    # Arcade
+}
+
+RDB_TYPE_MAP = {
+    "name": str,
+    "description": str,
+    "genre": str,
+    "achievements": int,
+    "category": str,
+    "language": str,
+    "region": str,
+    "console_exclusive": int,
+    "platform_exclusive": int,
+    "score": str,
+    "media": str,
+    "controls": str,
+    "artstyle": str,
+    "gameplay": str,
+    "narrative": str,
+    "pacing": str,
+    "perspective": str,
+    "setting": str,
+    "visual": str,
+    "vehicular": str,
+    "rom_name": str,
+    "size": int,
+    "users": int,
+    "releasemonth": int,
+    "releaseyear": int,
+    "rumble": int,
+    "analog": int,
+    "famitsu_rating": int,
+    "edge_rating": int,
+    "edge_issue": int,
+    "edge_review": str,
+    "enhancement_hw": str,
+    "barcode": str,
+    "esrb_rating": str,
+    "elspa_rating": str,
+    "pegi_rating": str,
+    "cero_rating": str,
+    "franchise": str,
+    "developer": str,
+    "publisher": str,
+    "origin": str,
+    "coop": int,
+    "tgdb_rating": int,
+    "crc": bytes,
+    "md5": bytes,
+    "sha1": bytes,
+    "serial": bytes,
+}

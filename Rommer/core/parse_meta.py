@@ -92,7 +92,7 @@ class RDB:
 
             rom[key] = content
 
-        self.parsed_data = res
+        self.parsed_data = [r for r in res if "name" in r]
 
 
 class ParseDat:

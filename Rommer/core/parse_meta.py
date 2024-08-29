@@ -33,12 +33,12 @@ class RDB:
                 if rom:
                     res.append(rom)
                 rom = {}
-            if rom_indicator == 222:  # special 3 bytes length rom sep indicator
+            elif rom_indicator == 222:  # special 3 bytes length rom sep indicator
                 p += 3
                 if rom:
                     res.append(rom)
                 rom = {}
-            if rom_indicator == 130:  # useless byte between key and value
+            elif rom_indicator == 130:  # useless byte between key and value
                 p += 1
 
             key_len = int.from_bytes(self.data[p : p + 1], byteorder="big") - 160
@@ -89,8 +89,17 @@ class RDB:
                         content = content.hex().upper()
                 else:
                     content = content.hex().upper()
-
             rom[key] = content
+        res.append(rom)
+
+        # get count num
+        while p < self.maxlen:
+            if self.data[p : p + 5] == b"count":
+                p += 5
+                break
+            p += 1
+        last_len = 2 ** (int.from_bytes(self.data[p : p + 1], byteorder="big") - 204)
+        self.expect_num = int.from_bytes(self.data[-last_len:], byteorder="big")
 
         self.parsed_data = [r for r in res if "name" in r]
 

@@ -28,7 +28,7 @@ class RDB:
         rom = {}
         while p < self.maxlen - 16:
             rom_indicator = int.from_bytes(self.data[p : p + 1], byteorder="big")
-            if rom_indicator > 130 and rom_indicator < 160:  # normal rom sep indicator
+            if 130 < rom_indicator < 160:  # normal rom sep indicator
                 p += 1
                 if rom:
                     res.append(rom)
@@ -90,17 +90,17 @@ class RDB:
                 else:
                     content = content.hex().upper()
             rom[key] = content
+        
         res.append(rom)
 
         # get count num
-        while p < self.maxlen:
-            if self.data[p : p + 5] == b"count":
-                p += 5
-                break
-            p += 1
+        count_index = self.data.find(b"count", p, self.maxlen)
+        if self.maxlen - count_index > 5:
+            p = count_index + 5
         last_len = 2 ** (int.from_bytes(self.data[p : p + 1], byteorder="big") - 204)
         self.expect_num = int.from_bytes(self.data[-last_len:], byteorder="big")
 
+        # filter useless data
         self.parsed_data = [r for r in res if "name" in r]
 
 

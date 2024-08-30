@@ -1,9 +1,12 @@
 import os
+import sys
 import json
 import sqlite3
 import argparse
 
 import pandas as pd
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from Rommer.core.parse_meta import RDB
 
@@ -28,10 +31,11 @@ for file in files:
     name = ".".join(os.path.split(file)[1].split(".")[:-1])
     rdb = RDB(file)
     print("parsing", file)
+    print(f"expect {rdb.expect_num} entries, parsed {len(rdb.parsed_data)} entries.")
     if args.type == "json":
         out = os.path.join(args.output, name + ".json")
-        json.dump(rdb.parsed_data, open(out, "w"), indent=4)
-        print("dumped to", out)
+        json.dump(rdb.parsed_data, open(out, "w"), indent=4)  # noqa: SIM115
+        print("dumped to", out, "\n")
     elif args.type == "db":
         df = pd.DataFrame(rdb.parsed_data)
         df["platform"] = name

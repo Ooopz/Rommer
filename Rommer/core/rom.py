@@ -1,7 +1,7 @@
+from calendar import c
 import os
 import sys
 import shutil
-from concurrent.futures import ThreadPoolExecutor
 
 from . import file_handler as fh
 from .parse_meta import RDB, read_2col_csv_to_dict
@@ -22,24 +22,13 @@ class RomSet:
             for g in rdb.parsed_data:
                 g["console_type"] = self.console_type
                 self.metas[g["name"]] = g
-            # self.metas = {k: self.metas[k] for k in sorted(self.metas)}
-            print(f"Added {len(self.rawmetas)} metadata.")
+            print(f"Added {len(self.metas)} metadata.")
         else:
             print("Metadata already enhanced, can't add new metas.")
 
-    def add_meta_alt_name(self, namemap_path):
-        name = read_2col_csv_to_dict(namemap_path)
-        for k, v in name.items():
-            if self.metas.get(k, None) is not None:
-                self.metas[k]["alt_name"] = v
-            else:
-                self.metas[k] = {"name": k, "alt_name": v}
-        self.enhanced = True
-        print(f"Enhanced {len(name)} metadata.")
-
     def add_rom(self, rom_path: str):
-        SmartRom = getattr(sys.modules[__name__], self.console_type.name)
-        r = SmartRom(rom_path)
+        SmartRom = getattr(sys.modules[__name__], self.console_type.name, BaseRom)
+        r = SmartRom(rom_path, self.console_type)
         self.roms[r.name] = r
 
     def add_roms(self, folder_paths, valid_extensions):
@@ -47,8 +36,29 @@ class RomSet:
             for file in f:
                 if file.split(".")[-1] in valid_extensions:
                     self.add_rom(os.path.join(r, file))
-        # self.roms = {k: self.roms[k] for k in sorted(self.roms)}
         print(f"Added {len(self.roms)} roms.")
+
+    def set_std_name_for_rom(self, namemap_path):
+        name_map = read_2col_csv_to_dict(namemap_path)
+        count = 0
+        for name, std_name in name_map.items():
+            for rom_name, rom in self.roms.items():
+                if name == rom.name or name == rom.std_name or name == rom.alt_name:
+                    self.roms[rom_name].std_name = std_name
+                    count += 1
+                    break
+        print(f"Set {count} std names.")
+
+    def set_alt_name_for_rom(self, namemap_path):
+        count = 0
+        name_map = read_2col_csv_to_dict(namemap_path)
+        for name, alt_name in name_map.items():
+            for rom_name, rom in self.roms.items():
+                if name == rom.name or name == rom.std_name or name == rom.alt_name:
+                    self.roms[rom_name].alt_name = alt_name
+                    count += 1
+                    break
+        print(f"Set {count} alt names.")
 
     def match(self):
         if len(self.roms) == 0:
@@ -58,70 +68,94 @@ class RomSet:
             print("No metadata.")
             return
         success = 0
+        self.match_success_list = []
+        self.match_failed_list = []
         for rom in self.roms:
             for meta in self.metas.values():
                 if self.roms[rom].match_meta(meta):
+                    self.roms[rom].meta = meta
                     success += 1
+                    self.match_success_list.append(rom)
                     break
+            else:
+                self.match_failed_list.append(rom)
 
         print(f"Matched {success} / {len(self.roms)} roms.")
 
-    def fill_alt_name(self):
-        for rom in self.roms.values():
-            if rom.meta is not None and rom.meta.get("alt_name", None) is not None:
-                rom.alt_name = rom.meta["alt_name"]
+    def filter_std_name(self):
+        self.roms = {k: v for k, v in self.roms.items() if v.std_name is not None}
 
     def filter_alt_name(self):
         self.roms = {k: v for k, v in self.roms.items() if v.alt_name is not None}
 
-    def gen_new_rom_set(self, out_dir, use_alt_name=False):
-        for rom in self.roms.values():
-            if rom.meta is not None:
-                os.makedirs(out_dir, exist_ok=True)
-                name = rom.alt_name if use_alt_name and rom.alt_name is not None else rom.name
-                shutil.copy(rom.rom_path, os.path.join(out_dir, name + "." + rom.extend))
-
-    def dl_images(self, out_dir, use_alt_name=False):
+    def gen_new_rom_set(self, out_dir, use_std_name=False, use_alt_name=False):
         os.makedirs(out_dir, exist_ok=True)
         for rom in self.roms.values():
             if rom.meta is not None:
-                name = rom.alt_name if use_alt_name and rom.alt_name is not None else rom.name
-                saved_fp = os.path.join(out_dir, name + ".png")
-                download_boxart(rom.meta["name"], self.console_type, saved_fp)
+                if use_std_name and rom.std_name is not None:
+                    name = rom.std_name
+                elif use_alt_name and rom.alt_name is not None:
+                    name = rom.alt_name
+                else:
+                    name = rom.name
+                save_fp = os.path.join(out_dir, name + "." + rom.extend)
+                shutil.copy(rom.rom_path, save_fp)
+
+    def dl_images(self, out_dir, use_std_name=False, use_alt_name=False):
+        os.makedirs(out_dir, exist_ok=True)
+        for rom in self.roms.values():
+            if rom.meta is not None:
+                if use_std_name and rom.std_name is not None:
+                    name = rom.std_name
+                elif use_alt_name and rom.alt_name is not None:
+                    name = rom.alt_name
+                else:
+                    name = rom.name
+                save_fp = os.path.join(out_dir, name + ".png")
+                download_boxart(rom.meta["name"], self.console_type, save_fp)
 
 
-class Rom:
-    def __init__(self, rom_path):
+class BaseRom:
+    def __init__(self, rom_path, ctype):
         self.rom_path = rom_path
+        self.ctype = ctype
         self.name = ".".join(os.path.basename(rom_path).split(".")[:-1])
         self.extend = os.path.basename(rom_path).split(".")[-1]
-        self.alt_name = None
+        self.serial = None
+
         self.std_name = None
+        self.alt_name = None
         self.meta = None
         self.filetype = None
-        self.calc_hash()
+
         self.init()
+        self.calc_hash()
 
     def init(self):
-        raise NotImplementedError
+        pass
 
-    def match_meta_basic(self, meta: dict):
-        if self.sha1 == meta.get("sha1"):
-            return True
-        if self.md5 == meta.get("md5"):
-            return True
-        if self.crc32 == meta.get("crc32"):
-            return True
-        if self.name == meta.get("name"):
-            return True
+    def __str__(self) -> str:
+        return f"{self.ctype.name} Rom: {self.name}"
 
     def match_meta(self, meta: dict):
-        raise NotImplementedError
+        match = any(
+            [
+                self.sha1 == meta.get("sha1", " "),
+                self.md5 == meta.get("md5", " "),
+                self.crc32 == meta.get("crc32", " "),
+                self.serial == meta.get("serial", " "),
+                self.name == meta.get("name", " "),
+                self.std_name == meta.get("name", " "),
+                self.alt_name == meta.get("name", " "),
+                self.name == meta.get("rom_name", " "),
+            ]
+        )
 
-    def set_alt_name(self, alt_name):
-        self.alt_name = alt_name
+        if match:
+            self.meta = meta
+        return match
 
-    def calc_hash(self):
+    def get_data(self):
         if fh.is_zip(self.rom_path):
             data = fh.load_zip(self.rom_path)
         elif fh.is_rar(self.rom_path):
@@ -130,47 +164,40 @@ class Rom:
             data = fh.load_7z(self.rom_path)
         else:
             data = fh.load_bin(self.rom_path)
+        return data
 
+    def calc_hash(self):
+        data = self.get_data()
         self.crc32 = fh.calc_crc32(data)
         self.md5 = fh.calc_md5(data)
         self.sha1 = fh.calc_sha1(data)
 
         print(f"Hash for {self.name} calculated.")
 
-
-class PM(Rom):
-    def match_meta(self, meta: dict):
-        if self.match_meta_basic(meta):
-            self.meta = meta
-            return True
-
-    def init(self):
+    def get_serial(self):
         pass
 
+    def set_alt_name(self, alt_name):
+        self.alt_name = alt_name
 
-class NES(Rom):
-    def match_meta(self, meta: dict):
-        if self.match_meta_basic(meta):
-            self.meta = meta
-            return True
 
+class GBC(BaseRom):
     def init(self):
-        pass
-
-
-class Arcade(Rom):
-    def init(self):
-        pass
-
-    def match_meta(self, meta: dict):
-        if self.name == meta["rom_name"].split(".")[0]:
-            self.meta = meta
-            return True
-
-
-class GBA(Rom):
-    def init(self):
-        self.type = ConsoleType.GBA
+        self.compatibility()
 
     def get_serial(self):
-        return self.load_rom()[:12]
+        data = self.get_data()
+        return data[0x013F:0x0143].decode("utf-8")
+
+    def compatibility(self):
+        data = self.get_data()
+        if data[0x0143] == 0xC0:
+            self.is_gb = False
+            self.is_gbc = True
+        elif data[0x0143] == 0x80:
+            self.is_gb = True
+            self.is_gbc = True
+        else:
+            self.is_gb = True
+            self.is_gbc = False
+        self.is_sgb = data[0x0146] == 0x03

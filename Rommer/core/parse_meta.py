@@ -9,6 +9,7 @@ class RDB:
         self.data = None
         self.maxlen = 0
         self.parsed_data = None
+        self.expect_num = 0
 
         self.rdb_fp = rdb_fp
         self.load_rdb()
@@ -23,82 +24,81 @@ class RDB:
         self.maxlen = len(self.data)
 
     def parse_rdb(self):
+        def to_int(data):
+            return int.from_bytes(data, byteorder="big")
+
+        def get_rom(p):
+            rom_indicator = to_int(self.data[p : p + 1])
+            if rom_indicator == 0xDE:
+                content_len = to_int(self.data[p : p + 3]) - 0xDE0000
+                p += 3
+            else:
+                content_len = rom_indicator - 0x80
+                p += 1
+            return p, content_len
+
+        def get_str(p):
+            str_indicator = to_int(self.data[p : p + 1])
+            if str_indicator == 0xD9:  # two bytes length indicator
+                next_len = to_int(self.data[p : p + 2]) - 0xD900
+                p += 2
+            elif str_indicator == 0xDA:  # three bytes length indicator
+                next_len = to_int(self.data[p : p + 3]) - 0xDA0000
+                p += 3
+            else:  # one byte length indicator
+                next_len = str_indicator - 0xA0
+                p += 1
+            content = self.data[p : p + next_len].decode("utf-8")
+            p += next_len
+            return p, content
+
+        def get_int(p):
+            int_indicator = to_int(self.data[p : p + 1])
+            next_len = 2 ** (int_indicator - 0xCC)  # one byte length indicator
+            p += 1
+            content = to_int(self.data[p : p + next_len])
+            p += next_len
+            return p, content
+
+        def get_bytes(p):
+            bytes_indicator = to_int(self.data[p : p + 1])
+            if bytes_indicator == 0xC4:  # two bytes length indicator
+                next_len = to_int(self.data[p : p + 2]) - 0xC400
+                p += 2
+            content = self.data[p : p + next_len]
+            p += next_len
+            if key == "serial":
+                try:
+                    content = content.decode("utf-8")
+                except UnicodeDecodeError:
+                    content = content.hex().upper()
+            else:
+                content = content.hex().upper()
+            return p, content
+
         p = 16
         res = []
-        rom = {}
+
         while p < self.maxlen - 16:
-            rom_indicator = int.from_bytes(self.data[p : p + 1], byteorder="big")
-            if 130 < rom_indicator < 160:  # normal rom sep indicator
-                p += 1
-                if rom:
-                    res.append(rom)
-                rom = {}
-            elif rom_indicator == 222:  # special 3 bytes length rom sep indicator
-                p += 3
-                if rom:
-                    res.append(rom)
-                rom = {}
-            elif rom_indicator == 130:  # useless byte between key and value
-                p += 1
-
-            key_len = int.from_bytes(self.data[p : p + 1], byteorder="big") - 160
-            p += 1
-
-            key = self.data[p : p + key_len].decode("utf-8")
-            p += key_len
-
-            if RDB_TYPE_MAP[key] is str:
-                str_indicator = int.from_bytes(self.data[p : p + 1], byteorder="big")
-
-                if str_indicator == 217:  # two bytes length indicator
-                    next_len = int.from_bytes(self.data[p : p + 2], byteorder="big") - 55552
-                    p += 2
-                elif str_indicator == 218:  # three bytes length indicator
-                    next_len = int.from_bytes(self.data[p : p + 3], byteorder="big") - 14286848
-                    p += 3
-                else:  # one byte length indicator
-                    next_len = str_indicator - 160
-                    p += 1
-
-                content = self.data[p : p + next_len].decode("utf-8")
-                p += next_len
-
-            elif RDB_TYPE_MAP[key] is int:  # int 类型的 key 后是一位类型指示符加四位定长，然后是 int
-                int_indicator = int.from_bytes(self.data[p : p + 1], byteorder="big")
-                p += 1
-
-                next_len = 2 ** (int_indicator - 204)
-                content = int.from_bytes(self.data[p : p + next_len], byteorder="big")
-                p += next_len
-
-            elif RDB_TYPE_MAP[key] is bytes:  # bytes 类型的 key 后是一位类型指示符加一位长度指示符，然后是 bytes
-                bytes_indicator = int.from_bytes(self.data[p : p + 1], byteorder="big")
-                p += 1
-
-                bytes_len_indicator = int.from_bytes(self.data[p : p + 1], byteorder="big")
-                p += 1
-
-                next_len = bytes_len_indicator
-                content = self.data[p : p + next_len]
-                p += next_len
-
-                if key == "serial":
-                    try:
-                        content = content.decode("utf-8")
-                    except UnicodeDecodeError:
-                        content = content.hex().upper()
-                else:
-                    content = content.hex().upper()
-            rom[key] = content
-        
-        res.append(rom)
+            rom = {}
+            p, content_len = get_rom(p)
+            for _ in range(content_len):
+                p, key = get_str(p)
+                # get value
+                if RDB_TYPE_MAP[key] is str:
+                    p, content = get_str(p)
+                elif RDB_TYPE_MAP[key] is int:
+                    p, content = get_int(p)
+                elif RDB_TYPE_MAP[key] is bytes:
+                    p, content = get_bytes(p)
+                rom[key] = content
+            res.append(rom)
 
         # get count num
         count_index = self.data.find(b"count", p, self.maxlen)
         if self.maxlen - count_index > 5:
             p = count_index + 5
-        last_len = 2 ** (int.from_bytes(self.data[p : p + 1], byteorder="big") - 204)
-        self.expect_num = int.from_bytes(self.data[-last_len:], byteorder="big")
+            _, self.expect_num = get_int(p)
 
         # filter useless data
         self.parsed_data = [r for r in res if "name" in r]

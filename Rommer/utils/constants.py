@@ -28,13 +28,13 @@ class ConsoleType(Enum):
     WII = 12
     WIIU = 13
 
-    PSX = 14
+    PS = 14
     PS2 = 15
     PSP = 16
     PSV = 17
 
     MD = 18
-    ST = 19
+    SS = 19
     DC = 20
     GG = 21
 
@@ -60,13 +60,13 @@ CONSOLE_NAME_MAP = {
     ConsoleType.WII: "Nintendo - Nintendo Wii",  # gen 7
     ConsoleType.WIIU: "Nintendo - Nintendo Wii U",  # gen 8
     # Sony
-    ConsoleType.PSX: "Sony - Sony PlayStation",  # gen 5
+    ConsoleType.PS: "Sony - Sony PlayStation",  # gen 5
     ConsoleType.PS2: "Sony - Sony PlayStation 2",  # gen 6
     ConsoleType.PSP: "Sony - Sony PlayStation Portable",
     ConsoleType.PSV: "Sony - Sony PlayStation Vita",
     # Sega
     ConsoleType.MD: "Sega - Mega Drive - Genesis",  # gen 4
-    ConsoleType.ST: "Sega - Saturn",  # gen 5
+    ConsoleType.SS: "Sega - Saturn",  # gen 5
     ConsoleType.DC: "Sega - Dreamcast",  # gen 6
     ConsoleType.GG: "Sega - Game Gear",
     # Arcade

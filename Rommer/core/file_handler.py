@@ -75,7 +75,7 @@ def load_7z(fp):
 
 
 def load_bin(fp):
-    with open(fp) as f:
+    with open(fp, "rb") as f:
         return f.read()
 
 

@@ -45,7 +45,7 @@ class ConsoleType(Enum):
 
 CONSOLE_NAME_MAP = {
     # Nintendo
-    ConsoleType.GW: "Nintendo - Game & Watch",
+    ConsoleType.GW: "Handheld Electronic Game",
     ConsoleType.PM: "Nintendo - Pokemon Mini",
     ConsoleType.GB: "Nintendo - Game Boy",
     ConsoleType.GBC: "Nintendo - Game Boy Color",

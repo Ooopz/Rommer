@@ -4,7 +4,7 @@ import shutil
 
 from . import file_handler as fh
 from .parse_meta import RDB, read_2col_csv_to_dict
-from ..utils.spider import download_boxart
+from ..utils.spider import download_libretro_boxart
 from ..utils.constants import ConsoleType
 
 
@@ -111,7 +111,14 @@ class RomSet:
                 else:
                     name = rom.name
                 save_fp = os.path.join(out_dir, name + ".png")
-                download_boxart(rom.meta["name"], self.console_type, save_fp)
+
+                rom_name = ".".join(rom.meta["rom_name"].split(".")[:-1])
+                if download_libretro_boxart(rom_name, self.console_type, save_fp):  # noqa: SIM114
+                    pass
+                elif download_libretro_boxart(rom.meta["name"], self.console_type, save_fp):  # noqa: SIM114
+                    pass
+                elif download_libretro_boxart(rom.name, self.console_type, save_fp):
+                    pass
 
 
 class BaseRom:
@@ -200,3 +207,8 @@ class GBC(BaseRom):
             self.is_gb = True
             self.is_gbc = False
         self.is_sgb = data[0x0146] == 0x03
+
+
+class PS(BaseRom):
+    def get_serial(self):
+        pass

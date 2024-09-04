@@ -1,5 +1,6 @@
 import re
 import csv
+import xml.etree.ElementTree as ET
 
 from ..utils.constants import RDB_TYPE_MAP, ConsoleType
 
@@ -8,7 +9,7 @@ class RDB:
     def __init__(self, rdb_fp):
         self.data = None
         self.maxlen = 0
-        self.parsed_data = None
+        self.parsed_data = []
         self.expect_num = 0
 
         self.rdb_fp = rdb_fp
@@ -102,6 +103,46 @@ class RDB:
 
         # filter useless data
         self.parsed_data = [r for r in res if "name" in r]
+
+
+class DAT:
+    def __init__(self, dat_fp):
+        self.data = None
+        self.parsed_data = []
+        self.header = {}
+
+        self.dat_fp = dat_fp
+        self.load_dat()
+        self.parse_dat()
+
+    def load_dat(self):
+        with open(self.dat_fp, "rb") as f:
+            self.data = f.read()
+
+    def parse_dat(self):
+        tree = ET.parse(self.data)
+        root = tree.getroot()
+
+        # parse header
+        _header = root.find("header")
+        if _header is not None:
+            for child in _header:
+                self.header[child.tag] = child.text
+
+        # parse games
+        for _game in root.findall("game"):
+            meta = {}
+            meta.update(_game.attrib)
+            for child in _game:
+                if child.tag == "rom":
+                    child.attrib["rom_name"] = child.attrib.pop("name")
+                    meta.update(child.attrib)
+                else:
+                    meta[child.tag] = child.text
+            self.parsed_data.append(meta)
+
+        # filter useless data
+        self.parsed_data = [r for r in self.parsed_data if "name" in r]
 
 
 class ParseDat:

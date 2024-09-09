@@ -1,5 +1,4 @@
 from enum import Enum
-from sre_constants import IN
 
 
 def invert_dict(d):

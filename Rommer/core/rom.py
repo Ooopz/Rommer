@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import shutil
 
@@ -68,6 +69,17 @@ class RomSet:
                     break
         print(f"Set {count} alt names.")
 
+    def set_serial_for_rom(self, serialmap_path):
+        count = 0
+        serial_map = load_csv_pair(serialmap_path)
+        for name, serial in serial_map.items():
+            for rom_name, rom in self.roms.items():
+                if name == rom.name or name == rom.std_name or name == rom.alt_name:
+                    self.roms[rom_name].serial = serial
+                    count += 1
+                    break
+        print(f"Set {count} serials.")
+
     def exact_match(self, rom, meta):
         return any(
             [
@@ -86,9 +98,8 @@ class RomSet:
         matched, score = fuzzywuzzy.process.extractOne(rom.name, metas)
         if score > 95:
             return matched
-        
 
-    def match(self):
+    def match(self, use_hash=False, use_serial=False):
         if len(self.roms) == 0:
             print("No roms.")
             return
@@ -100,6 +111,10 @@ class RomSet:
         self.match_failed_list = []
         meta_names = [meta["name"] for meta in self.metas.values()]
         for rom in self.roms:
+            if use_hash:
+                self.roms[rom].calc_hash()
+            if use_serial:
+                self.roms[rom].get_serial()
             for meta in self.metas.values():
                 if self.exact_match(self.roms[rom], meta):
                     self.roms[rom].set_meta(meta)
@@ -114,6 +129,7 @@ class RomSet:
                     self.match_success_list.append(rom)
                 else:
                     self.match_failed_list.append(rom)
+            self.roms[rom].clean_data()
 
         print(f"Matched {success} / {len(self.roms)} roms.")
 
@@ -126,15 +142,14 @@ class RomSet:
     def gen_new_rom_set(self, out_dir, use_std_name=False, use_alt_name=False):
         os.makedirs(out_dir, exist_ok=True)
         for rom in self.roms.values():
-            if rom.meta is not None:
-                if use_std_name and rom.std_name is not None:
-                    name = rom.std_name
-                elif use_alt_name and rom.alt_name is not None:
-                    name = rom.alt_name
-                else:
-                    name = rom.name
-                save_fp = os.path.join(out_dir, name + "." + rom.extend)
-                shutil.copy(rom.rom_path, save_fp)
+            if use_std_name and rom.std_name is not None:
+                name = rom.std_name
+            elif use_alt_name and rom.alt_name is not None:
+                name = rom.alt_name
+            else:
+                name = rom.name
+            save_fp = os.path.join(out_dir, name + "." + rom.extend)
+            shutil.copy(rom.rom_path, save_fp)
 
     def dl_images(self, out_dir, use_std_name=False, use_alt_name=False):
         os.makedirs(out_dir, exist_ok=True)
@@ -163,15 +178,18 @@ class BaseRom:
         self.ctype = ctype
         self.name = ".".join(os.path.basename(rom_path).split(".")[:-1])
         self.extend = os.path.basename(rom_path).split(".")[-1]
-        self.serial = None
 
         self.std_name = None
         self.alt_name = None
         self.meta = None
         self.filetype = None
+        self.sha1 = None
+        self.md5 = None
+        self.crc32 = None
+        self.serial = None
+        self.data = None
 
         self.init()
-        self.calc_hash()
 
     def init(self):
         pass
@@ -194,15 +212,19 @@ class BaseRom:
         return data
 
     def calc_hash(self):
-        data = self.get_data()
-        self.crc32 = fh.calc_crc32(data)
-        self.md5 = fh.calc_md5(data)
-        self.sha1 = fh.calc_sha1(data)
+        if self.data is None:
+            self.data = self.get_data()
+        self.crc32 = fh.calc_crc32(self.data)
+        self.md5 = fh.calc_md5(self.data)
+        self.sha1 = fh.calc_sha1(self.data)
 
         print(f"Hash for {self.name} calculated.")
 
     def get_serial(self):
         pass
+
+    def clean_data(self):
+        self.data = None
 
     def set_alt_name(self, alt_name):
         self.alt_name = alt_name
@@ -213,8 +235,10 @@ class GBC(BaseRom):
         self.compatibility()
 
     def get_serial(self):
-        data = self.get_data()
-        return data[0x013F:0x0143].decode("utf-8")
+        if self.data is None:
+            self.data = self.get_data()
+        self.serial = self.data[0x013F:0x0143].decode("utf-8")
+        print(f"Serial for {self.name} is {self.serial}.")
 
     def compatibility(self):
         data = self.get_data()
@@ -232,4 +256,56 @@ class GBC(BaseRom):
 
 class PS(BaseRom):
     def get_serial(self):
-        pass
+        if self.data is None:
+            self.data = self.get_data()
+
+        regexp = b"[A-Z]{4}[_-][0-9]{3}[.][0-9]{2}|LSP[0-9]{5}[.][0-9]{3}"
+        alt_regexp = b"MEDAROT_R|DRAGONWARRIOR7_1|DRAGONWARRIOR7_2|ROAD WRITER|DEJIKURO|PACHIOKUN|SLPS_00137|LADIES\\.DA;1|BANNY\\.VDF;1|NP_ISHI0\\.SPL;1|G9_100L\\.DA;1|MYST\\.CCS;1|ATLUS\\.STR;1|ATKDAT\\.CFL;1|RX78\\.TMD;1|_HA30\\.STR;1|A_LOGO\\.STR;1|ENTSTAR\\.STR;1|KAMI00\\.BIN;1|DEGI3\\.STR;1|LOG\\.BAK;1|WIN_FNT2\\.BIN;1|PACHI2BG\\.TIM;1|RDATWI\\.BIN;1|AH1MAP\\.MAP;1|TORNYA\\.TPC;1|EPI_MCH\\.STR;1|H_TAISOH\\.VHB;1|OBJ\\.RRO;1|VTENNIS\\.STR;1|QUE184\\.TIM;1|GOACC\\.TIM;1|OPENXA\\.STR;1"
+
+        alt_lable_map = {
+            "MEDAROT_R": "SLPS_024.14",
+            "DRAGONWARRIOR7_1": "SLUS_012.06",
+            "DRAGONWARRIOR7_2": "SLUS_013.46",
+            "ROAD WRITER": "907127.001",
+            "DEJIKURO": "SLPS_005.49",
+            "PACHIOKUN": "SLPS_000.37",
+            "SLPS_00137": "SLPS_001.37",
+            "LADIES.DA;1": "SLPS_000.23",
+            "BANNY.VDF;1": "SLPS_000.04",
+            "NP_ISHI0.SPL;1": "SLPS_001.13",
+            "G9_100L.DA;1": "SLPS_000.38",
+            "MYST.CCS;1": "SLPS_000.24",
+            "ATLUS.STR;1": "SLPS_001.04",
+            "ATKDAT.CFL;1": "SCPS_100.02",
+            "RX78.TMD;1": "SLPS_000.35",
+            "_HA30.STR;1": "SCPS_100.16",
+            "A_LOGO.STR;1": "SLPS_000.85",
+            "ENTSTAR.STR;1": "SLPS_000.22",
+            "KAMI00.BIN;1": "SLPS_000.89",
+            "LOG.BAK;1": "SLPS_000.51",
+            "WIN_FNT2.BIN;1": "SLPS_000.90",
+            "PACHI2BG.TIM;1": "SLPS_000.21",
+            "RDATWI.BIN;1": "SLPS_000.37",
+            "AH1MAP.MAP;1": "SLPS_000.60",
+            "TORNYA.TPC;1": "SLPS_000.92",
+            "EPI_MCH.STR;1": "SCPS_100.09",
+            "OBJ.RRO;1": "SLPS_000.01",
+            "VTENNIS.STR;1": "SLPS_001.03",
+            "QUE184.TIM;1": "SLPS_000.07",
+            "GOACC.TIM;1": "SLPS_000.48",
+            "OPENXA.STR;1": "SLPS_000.65",
+        }
+        data = self.get_data()
+        serial = re.search(regexp, data)
+        if serial:
+            serial = serial.group(0).decode("utf-8")
+        else:
+            serial = re.search(alt_regexp, data)
+            if serial:
+                serial = serial.group(0).decode("utf-8")
+                serial = alt_lable_map.get(serial)
+        if serial:
+            serial = serial.replace("_", "").replace(".", "").replace("-", "")
+            serial = serial[:4] + "-" + serial[4:]
+        self.serial = serial
+        print(f"Serial for {self.name} is {self.serial}.")

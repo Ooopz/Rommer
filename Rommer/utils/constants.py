@@ -1,4 +1,18 @@
 from enum import Enum
+from sre_constants import IN
+
+
+def invert_dict(d):
+    inverted_dict = {}
+    for k, v in d.items():
+        if v in inverted_dict:
+            if isinstance(inverted_dict[v], list):
+                inverted_dict[v].append(k)
+            else:
+                inverted_dict[v] = [inverted_dict[v], k]
+        else:
+            inverted_dict[v] = k
+    return inverted_dict
 
 
 class RomDataType(Enum):
@@ -13,64 +27,205 @@ class RomDataType(Enum):
 
 
 class ConsoleType(Enum):
-    GW = 0
-    PM = 1
-    GB = 2
-    GBC = 3
-    GBA = 4
-    NDS = 5
-    _3DS = 6
-    NS = 7
-    NES = 8
-    SNES = 9
-    N64 = 10
-    GC = 11
-    WII = 12
-    WIIU = 13
-
-    PS = 14
-    PS2 = 15
-    PSP = 16
-    PSV = 17
-
-    MD = 18
-    SS = 19
-    DC = 20
-    GG = 21
-
-    ARCADE = 22
-
-    OTHER = 99
-
-
-CONSOLE_NAME_MAP = {
-    # Nintendo
-    ConsoleType.GW: "Handheld Electronic Game",
-    ConsoleType.PM: "Nintendo - Pokemon Mini",
-    ConsoleType.GB: "Nintendo - Game Boy",
-    ConsoleType.GBC: "Nintendo - Game Boy Color",
-    ConsoleType.GBA: "Nintendo - Game Boy Advance",
-    ConsoleType.NDS: "Nintendo - Nintendo DS",
-    ConsoleType._3DS: "Nintendo - Nintendo 3DS",
-    ConsoleType.NS: "Nintendo - Nintendo Switch",
-    ConsoleType.NES: "Nintendo - Nintendo Entertainment System",  # gen 3
-    ConsoleType.SNES: "Nintendo - Super Nintendo Entertainment System",  # gen 4
-    ConsoleType.N64: "Nintendo - Nintendo 64",  # gen 5
-    ConsoleType.GC: "Nintendo - Nintendo GameCube",  # gen 6
-    ConsoleType.WII: "Nintendo - Nintendo Wii",  # gen 7
-    ConsoleType.WIIU: "Nintendo - Nintendo Wii U",  # gen 8
-    # Sony
-    ConsoleType.PS: "Sony - Sony PlayStation",  # gen 5
-    ConsoleType.PS2: "Sony - Sony PlayStation 2",  # gen 6
-    ConsoleType.PSP: "Sony - Sony PlayStation Portable",
-    ConsoleType.PSV: "Sony - Sony PlayStation Vita",
-    # Sega
-    ConsoleType.MD: "Sega - Mega Drive - Genesis",  # gen 4
-    ConsoleType.SS: "Sega - Saturn",  # gen 5
-    ConsoleType.DC: "Sega - Dreamcast",  # gen 6
-    ConsoleType.GG: "Sega - Game Gear",
     # Arcade
+    ARCADE = "ARCADE"
+
+    # Nintendo
+    GW = "GW"
+    PM = "PM"
+    GB = "GB"
+    GBC = "GBC"
+    GBA = "GBA"
+    NDS = "NDS"
+    _3DS = "3DS"
+    NS = "NS"
+    NES = "NES"
+    SNES = "SNES"
+    N64 = "N64"
+    GC = "GC"
+    WII = "WII"
+    WIIU = "WIIU"
+
+    # Sony
+    PS = "PS"
+    PS2 = "PS2"
+    PSP = "PSP"
+    PSV = "PSV"
+
+    # Sega
+    MD = "MD"
+    SS = "SS"
+    DC = "DC"
+    GG = "GG"
+
+    # SNK
+    NGP = "NGP"
+    NGPC = "NGPC"
+
+    # Microsoft
+    MSX = "MSX"
+    MSX2 = "MSX2"
+    XBOX = "XBOX"
+    X360 = "X360"
+    XONE = "XONE"
+
+    # Atari
+    A26 = "A26"
+    A52 = "A52"
+    A78 = "A78"
+    LYNX = "LYNX"
+    JAG = "JAG"
+
+    # Bandai
+    WS = "WS"
+    WSC = "WSC"
+
+    # 3DO
+    _3DO = "3DO"
+
+    # NEC
+    PCE = "PCE"
+    PCECD = "PCECD"
+    PCFX = "PCFX"
+    SGFX = "SGFX"
+
+    OTHER = "OTHER"
+
+
+class Region(Enum):
+    CN = "CN"
+    JP = "JP"
+    US = "US"
+    EU = "EU"
+    WORLD = "WORLD"
+    OTH = "OTH"
+
+
+class Language(Enum):
+    CHS = "CHS"
+    CHT = "CHT"
+    EN = "EN"
+    JP = "JP"
+    OTH = "OTH"
+
+
+RDB_CONSOLE_MAP = {
+    # Arcade
+    "FBNeo - Arcade Games": ConsoleType.ARCADE,
+    "MAME 2000": ConsoleType.ARCADE,
+    "MAME 2003-Plus": ConsoleType.ARCADE,
+    "MAME 2003": ConsoleType.ARCADE,
+    "MAME 2010": ConsoleType.ARCADE,
+    "MAME 2015": ConsoleType.ARCADE,
+    "MAME 2016": ConsoleType.ARCADE,
+    "MAME": ConsoleType.ARCADE,
+    # Nintendo
+    "Handheld Electronic Game": ConsoleType.GW,
+    "Nintendo - Pokemon Mini": ConsoleType.PM,
+    "Nintendo - Game Boy": ConsoleType.GB,
+    "Nintendo - Game Boy Color": ConsoleType.GBC,
+    "Nintendo - Game Boy Advance": ConsoleType.GBA,
+    "Nintendo - Nintendo DS": ConsoleType.NDS,
+    "Nintendo - Nintendo 3DS": ConsoleType._3DS,
+    "Nintendo - Nintendo Switch": ConsoleType.NS,
+    "Nintendo - Nintendo Entertainment System": ConsoleType.NES,  # gen 3
+    "Nintendo - Super Nintendo Entertainment System": ConsoleType.SNES,  # gen 4
+    "Nintendo - Nintendo 64": ConsoleType.N64,  # gen 5
+    "Nintendo - Nintendo GameCube": ConsoleType.GC,  # gen 6
+    "Nintendo - Nintendo Wii": ConsoleType.WII,  # gen 7
+    "Nintendo - Nintendo Wii U": ConsoleType.WIIU,  # gen 8
+    # Sony
+    "Sony - Sony PlayStation": ConsoleType.PS,  # gen 5
+    "Sony - Sony PlayStation 2": ConsoleType.PS2,  # gen 6
+    "Sony - Sony PlayStation Portable": ConsoleType.PSP,
+    "Sony - Sony PlayStation Vita": ConsoleType.PSV,
+    # Sega
+    "Sega - Mega Drive - Genesis": ConsoleType.MD,  # gen 4
+    "Sega - Saturn": ConsoleType.SS,  # gen 5
+    "Sega - Dreamcast": ConsoleType.DC,  # gen 6
+    "Sega - Game Gear": ConsoleType.GG,
+    # Bandai
+    "Bandai - WonderSwan": ConsoleType.WS,
+    "Bandai - WonderSwan Color": ConsoleType.WSC,
+    # Microsoft
+    "Microsoft - MSX": ConsoleType.MSX,
+    "Microsoft - MSX2": ConsoleType.MSX2,
+    "Microsoft - Xbox": ConsoleType.XBOX,  # gen 6
+    # Atari
+    "Atari - 2600": ConsoleType.A26,
+    "Atari - 5200": ConsoleType.A52,
+    "Atari - 7800": ConsoleType.A78,
+    "Atari - Lynx": ConsoleType.LYNX,
+    "Atari - Jaguar": ConsoleType.JAG,
+    # NEC
+    "NEC - PC Engine - TurboGrafx 16": ConsoleType.PCE,
+    "NEC - PC Engine CD - TurboGrafx-CD": ConsoleType.PCECD,
+    "NEC - PC-FX": ConsoleType.PCFX,
+    "NEC - PC Engine SuperGrafx": ConsoleType.SGFX,
+    # SNK
+    "SNK - Neo Geo Pocket": ConsoleType.NGP,
+    "SNK - Neo Geo Pocket Color": ConsoleType.NGPC,
 }
+
+INVERT_RDB_CONSOLE_MAP = invert_dict(RDB_CONSOLE_MAP)
+
+OPENVGDB_CONSOLE_MAP = {
+    # Arcade
+    "Arcade": ConsoleType.ARCADE,
+    # Nintendo
+    "Nintendo Famicom Disk System": ConsoleType.NES,
+    "Nintendo Game Boy": ConsoleType.GB,
+    "Nintendo Game Boy Advance": ConsoleType.GBA,
+    "Nintendo Game Boy Color": ConsoleType.GBC,
+    "Nintendo GameCube": ConsoleType.GC,
+    "Nintendo 64": ConsoleType.N64,
+    "Nintendo DS": ConsoleType.NDS,
+    "Nintendo Entertainment System": ConsoleType.NES,
+    "Nintendo Super Nintendo Entertainment System": ConsoleType.SNES,
+    "Nintendo Virtual Boy": ConsoleType.OTHER,
+    "Nintendo Wii": ConsoleType.WII,
+    "3DO Interactive Multiplayer": ConsoleType._3DO,
+    # Sony
+    "Sony PlayStation": ConsoleType.PS,
+    "Sony PlayStation Portable": ConsoleType.PSP,
+    # Sega
+    "Sega 32X": ConsoleType.OTHER,
+    "Sega Game Gear": ConsoleType.GG,
+    "Sega Master System": ConsoleType.OTHER,
+    "Sega CD/Mega-CD": ConsoleType.OTHER,
+    "Sega Genesis/Mega Drive": ConsoleType.MD,
+    "Sega Saturn": ConsoleType.SS,
+    "Sega SG-1000": ConsoleType.OTHER,
+    # Bandai
+    "Bandai WonderSwan": ConsoleType.WS,
+    "Bandai WonderSwan Color": ConsoleType.WSC,
+    # Microsoft
+    "Microsoft MSX": ConsoleType.MSX,
+    "Microsoft MSX2": ConsoleType.MSX2,
+    # Atari
+    "Atari 2600": ConsoleType.A26,
+    "Atari 5200": ConsoleType.A52,
+    "Atari 7800": ConsoleType.A78,
+    "Atari Lynx": ConsoleType.LYNX,
+    "Atari Jaguar": ConsoleType.JAG,
+    "Atari Jaguar CD": ConsoleType.JAG,
+    # NEC
+    "NEC PC Engine/TurboGrafx-16": ConsoleType.PCE,
+    "NEC PC Engine CD/TurboGrafx-CD": ConsoleType.PCECD,
+    "NEC PC-FX": ConsoleType.PCFX,
+    "NEC SuperGrafx": ConsoleType.SGFX,
+    # SNK
+    "SNK Neo Geo Pocket": ConsoleType.NGP,
+    "SNK Neo Geo Pocket Color": ConsoleType.NGPC,
+    # Other
+    "Coleco ColecoVision": ConsoleType.OTHER,
+    "GCE Vectrex": ConsoleType.OTHER,
+    "Intellivision": ConsoleType.OTHER,
+    "Magnavox Odyssey2": ConsoleType.OTHER,
+    "Commodore 64": ConsoleType.OTHER,
+}
+
+INVERT_OPENVGDB_CONSOLE_MAP = invert_dict(OPENVGDB_CONSOLE_MAP)
 
 RDB_TYPE_MAP = {
     "name": str,

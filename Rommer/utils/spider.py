@@ -1,6 +1,8 @@
+from functools import partial
+
 import requests
 
-from .constants import CONSOLE_NAME_MAP
+from .constants import INVERT_RDB_CONSOLE_MAP
 
 
 def download_bin_file(url, save_path):
@@ -22,22 +24,40 @@ def clean_str(_str: str):
     return _str.translate(trans)
 
 
-def download_libretro_boxart(name, console_type, save_path):
-    name = clean_str(name)
-    console_name = clean_str(CONSOLE_NAME_MAP[console_type].replace(" ", "_"))
-    url = f"https://raw.githubusercontent.com/libretro-thumbnails/{console_name}/master/Named_Boxarts/{name}.png"
-    return download_bin_file(url, save_path)
+def download_libretro(url_template, name, console_type, save_path):
+    console = INVERT_RDB_CONSOLE_MAP[console_type]
+    if isinstance(console, list):
+        for c in console:
+            console_name = clean_str(c)
+            url = url_template.format(console_name, name)
+            if not download_bin_file(url, save_path):
+                return False
+    else:
+        console_name = clean_str(console)
+        url = url_template.format(console_name)
+        return download_bin_file(url, save_path)
 
 
-def download_libretro_snap(name, console_type, save_path):
-    name = clean_str(name)
-    console_name = clean_str(CONSOLE_NAME_MAP[console_type].replace(" ", "_"))
-    url = f"https://raw.githubusercontent.com/libretro-thumbnails/{console_name}/master/Named_Snaps/{name}.png"
-    return download_bin_file(url, save_path)
+download_libretro_rdb = partial(
+    download_libretro, "https://raw.githubusercontent.com/libretro/libretro-database/master/rdb/{}.rdb{}", ""
+)
 
 
-def download_libretro_title(name, console_type, save_path):
-    name = clean_str(name)
-    console_name = clean_str(CONSOLE_NAME_MAP[console_type].replace(" ", "_"))
-    url = f"https://raw.githubusercontent.com/libretro-thumbnails/{console_name}/master/Named_Titles/{name}.png"
+download_libretro_boxart = partial(
+    download_libretro, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Boxarts/{}.png"
+)
+
+
+download_libretro_snap = partial(
+    download_libretro, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Snaps/{}.png"
+)
+
+
+download_libretro_title = partial(
+    download_libretro, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Titles/{}.png"
+)
+
+
+def download_openvgdb(save_path):
+    url = "https://github.com/OpenVGDB/OpenVGDB/releases/download/v29.0/openvgdb.zip"
     return download_bin_file(url, save_path)

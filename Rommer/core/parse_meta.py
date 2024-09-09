@@ -1,11 +1,14 @@
-import re
 import csv
 import xml.etree.ElementTree as ET
 
-from ..utils.constants import RDB_TYPE_MAP, ConsoleType
+from ..utils.constants import RDB_TYPE_MAP, OPENVGDB_CONSOLE_MAP
 
 
 class RDB:
+    """For Libretro RDB file
+    https://github.com/libretro/libretro-database
+    """
+
     def __init__(self, rdb_fp):
         self.data = None
         self.maxlen = 0
@@ -106,6 +109,11 @@ class RDB:
 
 
 class DAT:
+    """For No-Intro and Redump DAT file
+    https://no-intro.org
+    http://redump.org
+    """
+
     def __init__(self, dat_fp):
         self.data = None
         self.parsed_data = []
@@ -145,54 +153,78 @@ class DAT:
         self.parsed_data = [r for r in self.parsed_data if "name" in r]
 
 
-class ParseDat:
-    def __init__(self, dat_fp, console_type):
-        self.dat_fp = dat_fp
-        self.console_type = console_type
-        self.get_regexp()
-        self.load_dat()
+class SQLite:
+    """For OpenVGDB SQLite database
+    https://github.com/OpenVGDB/OpenVGDB
+    """
 
-        self.parsed_content = []
+    def __init__(self, db_fp):
+        self.db_fp = db_fp
+        self.conn = None
+        self.cursor = None
+        self.parsed_data = []
 
-    def load_dat(self):
-        with open(self.dat_fp, encoding="utf-8") as file:
-            self.content = file.read()
+        self.connect()
+        self.parse()
 
-    def get_regexp(self):
-        if self.console_type == ConsoleType.GBA:
-            self.get_regexp_gba()
-        else:
-            raise NotImplementedError
+    def connect(self):
+        import sqlite3
+
+        self.conn = sqlite3.connect(self.db_fp)
+        self.cursor = self.conn.cursor()
 
     def parse(self):
-        matches = self.pattern.findall(self.content)
-        for matche in matches:
-            game = {}
-            for key, value in zip(self.match_key, matche):
-                game[key] = value
-            self.parsed_content.append(game)
+        sql = """
+            SELECT 
+                romExtensionlessFileName name,
+                romFileName rom_name,
+                romLanguage language,
+                TEMPromRegion region,
+                releaseDeveloper developer,
+                releasePublisher publisher,
+                releaseDescription description,
+                releaseGenre genre,
+                releaseDate year,
+                romSize size,
+                romSerial serial,
+                romHashCRC crc,
+                romHashMD5 md5,
+                romHashSHA1 sha1,
+                romDumpSource source,
+                releaseCoverFront cover_url,
+                TEMPsystemName console_type
+            FROM ROMs a
+            INNER JOIN (
+                SELECT 
+                    romID,
+                    releaseCoverFront,
+                    releaseDescription,
+                    releaseDeveloper,
+                    releasePublisher,
+                    releaseGenre,
+                    TEMPsystemName,
+                    SUBSTR(releaseDate, -4) releaseDate,
+                    releaseReferenceURL,
+                    releaseReferenceImageURL
+                FROM
+                    RELEASES 
+                GROUP BY romID
+            ) b
+            ON a.romID = b.romID
+            """
+        self.cursor.execute(sql)
+        rows = self.cursor.fetchall()
+        columns = [name[0] for name in self.cursor.description]
+        parsed_data = [dict(zip(columns, row)) for row in rows]
+        for r in parsed_data:
+            r["console_type"] = OPENVGDB_CONSOLE_MAP.get(r["console_type"], None)
+            self.parsed_data.append(r)
 
-    def get_regexp_gba(self):
-        self.pattern = re.compile(
-            r"""game \s* \(
-                     \s* name \s* "(?P<name>[^"]+)"
-                     \s* description \s* "(?P<description>[^"]+)"
-                     \s* serial \s* "(?P<serial>[^"]+)"
-                     \s* rom \s* \(
-                        \s* name \s* "(?P<rom_name>[^"]+)"
-                        \s* size \s* (?P<size>\d+)
-                        \s* crc \s* (?P<crc>[A-F0-9]+)
-                        \s* md5 \s* (?P<md5>[A-F0-9]+)
-                        \s* sha1 \s* (?P<sha1>[A-F0-9]+)
-                        \s* serial \s* "(?P<rom_serial>[^"]+)"
-                    \s* \)
-                \s *\)""",
-            re.VERBOSE,
-        )
-        self.match_key = ["name", "description", "serial", "rom_name", "size", "crc", "md5", "sha1", "rom_serial"]
+        # filter useless data
+        self.parsed_data = [r for r in self.parsed_data if "name" in r]
 
 
-def read_2col_csv_to_dict(file_path):
+def load_csv_pair(file_path):
     result_dict = {}
     with open(file_path, encoding="utf-8") as file:
         csv_reader = csv.reader(file)

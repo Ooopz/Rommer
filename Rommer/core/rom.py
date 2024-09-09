@@ -2,8 +2,10 @@ import os
 import sys
 import shutil
 
-from . import file_handler as fh
-from .parse_meta import RDB, read_2col_csv_to_dict
+import fuzzywuzzy
+
+from ..utils import file as fh
+from .parse_meta import DAT, RDB, SQLite, load_csv_pair
 from ..utils.spider import download_libretro_boxart
 from ..utils.constants import ConsoleType
 
@@ -13,17 +15,24 @@ class RomSet:
         self.metas = {}
         self.roms = {}
         self.console_type = console_type
-        self.enhanced = False
 
-    def add_metas(self, rdb_path):
-        if not self.enhanced:
-            rdb = RDB(rdb_path)
-            for g in rdb.parsed_data:
+    def add_metas(self, meta_path):
+        if meta_path.endswith(".rdb"):
+            meta = RDB(meta_path)
+            for g in meta.parsed_data:
                 g["console_type"] = self.console_type
                 self.metas[g["name"]] = g
-            print(f"Added {len(self.metas)} metadata.")
-        else:
-            print("Metadata already enhanced, can't add new metas.")
+        elif meta_path.endswith(".dat"):
+            meta = DAT(meta_path)
+            for g in meta.parsed_data:
+                g["console_type"] = self.console_type
+                self.metas[g["name"]] = g
+        elif meta_path.endswith(".sqlite"):
+            meta = SQLite(meta_path)  # allredy have console_type
+            for g in meta.parsed_data:
+                if g["console_type"] == self.console_type:
+                    self.metas[g["name"]] = g
+        print(f"Added {len(self.metas)} metadata.")
 
     def add_rom(self, rom_path: str):
         SmartRom = getattr(sys.modules[__name__], self.console_type.name, BaseRom)
@@ -38,7 +47,7 @@ class RomSet:
         print(f"Added {len(self.roms)} roms.")
 
     def set_std_name_for_rom(self, namemap_path):
-        name_map = read_2col_csv_to_dict(namemap_path)
+        name_map = load_csv_pair(namemap_path)
         count = 0
         for name, std_name in name_map.items():
             for rom_name, rom in self.roms.items():
@@ -50,7 +59,7 @@ class RomSet:
 
     def set_alt_name_for_rom(self, namemap_path):
         count = 0
-        name_map = read_2col_csv_to_dict(namemap_path)
+        name_map = load_csv_pair(namemap_path)
         for name, alt_name in name_map.items():
             for rom_name, rom in self.roms.items():
                 if name == rom.name or name == rom.std_name or name == rom.alt_name:
@@ -58,6 +67,26 @@ class RomSet:
                     count += 1
                     break
         print(f"Set {count} alt names.")
+
+    def exact_match(self, rom, meta):
+        return any(
+            [
+                rom.sha1 == meta.get("sha1", " "),
+                rom.md5 == meta.get("md5", " "),
+                rom.crc32 == meta.get("crc32", " "),
+                rom.serial == meta.get("serial", " "),
+                rom.name == meta.get("name", " "),
+                rom.std_name == meta.get("name", " "),
+                rom.alt_name == meta.get("name", " "),
+                rom.name == meta.get("rom_name", " "),
+            ]
+        )
+
+    def fuzzy_match(self, rom, metas):
+        matched, score = fuzzywuzzy.process.extractOne(rom.name, metas)
+        if score > 95:
+            return matched
+        
 
     def match(self):
         if len(self.roms) == 0:
@@ -69,15 +98,22 @@ class RomSet:
         success = 0
         self.match_success_list = []
         self.match_failed_list = []
+        meta_names = [meta["name"] for meta in self.metas.values()]
         for rom in self.roms:
             for meta in self.metas.values():
-                if self.roms[rom].match_meta(meta):
-                    self.roms[rom].meta = meta
+                if self.exact_match(self.roms[rom], meta):
+                    self.roms[rom].set_meta(meta)
                     success += 1
                     self.match_success_list.append(rom)
                     break
             else:
-                self.match_failed_list.append(rom)
+                matched = self.fuzzy_match(self.roms[rom], meta_names)
+                if matched:
+                    self.roms[rom].set_meta(self.metas[matched])
+                    success += 1
+                    self.match_success_list.append(rom)
+                else:
+                    self.match_failed_list.append(rom)
 
         print(f"Matched {success} / {len(self.roms)} roms.")
 
@@ -143,23 +179,8 @@ class BaseRom:
     def __str__(self) -> str:
         return f"{self.ctype.name} Rom: {self.name}"
 
-    def match_meta(self, meta: dict):
-        match = any(
-            [
-                self.sha1 == meta.get("sha1", " "),
-                self.md5 == meta.get("md5", " "),
-                self.crc32 == meta.get("crc32", " "),
-                self.serial == meta.get("serial", " "),
-                self.name == meta.get("name", " "),
-                self.std_name == meta.get("name", " "),
-                self.alt_name == meta.get("name", " "),
-                self.name == meta.get("rom_name", " "),
-            ]
-        )
-
-        if match:
-            self.meta = meta
-        return match
+    def set_meta(self, meta):
+        self.meta = meta
 
     def get_data(self):
         if fh.is_zip(self.rom_path):

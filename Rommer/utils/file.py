@@ -1,3 +1,4 @@
+from os import name
 import zlib
 import hashlib
 import zipfile
@@ -89,3 +90,33 @@ def calc_sha1(data):
 
 def calc_crc32(data):
     return f"{zlib.crc32(data)  & 0xFFFFFFFF:08X}"
+
+
+def filter_mac_files(files):
+    return [file for file in files if "__MACOSX" not in file]
+
+
+def extract_zip(fp, dst, extend=None):
+    extend = [extend] if isinstance(extend, str) else extend
+    with zipfile.ZipFile(fp, "r") as z:
+        if extend:
+            names = z.namelist()
+            filtered = filter_mac_files(names)
+            filtered = [name for name in filtered for ext in extend if name.endswith(ext)]
+            for file in filtered:
+                z.extract(file, dst)
+        else:
+            z.extractall(dst)
+
+
+def extract_7z(fp, dst, extend=None):
+    extend = [extend] if isinstance(extend, str) else extend
+    with py7zr.SevenZipFile(fp, "r") as z:
+        if extend:
+            names = z.getnames()
+            filtered = filter_mac_files(names)
+            filtered = [name for name in filtered for ext in extend if name.endswith(ext)]
+            for file in filtered:
+                z.extract(file, dst)
+        else:
+            z.extractall(dst)

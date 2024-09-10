@@ -1,4 +1,3 @@
-from os import name
 import zlib
 import hashlib
 import zipfile

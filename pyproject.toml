@@ -8,7 +8,6 @@ dependencies = [
 ]
 
 [tool.ruff]
-exclude = ["*.ipynb"]
 line-length = 120
 indent-width = 4
 
@@ -27,8 +26,6 @@ select = [
     "B",
     # flake8-simplify
     "SIM",
-    # isort
-    "I",
 ]
 
 ignore = ["E501", "E722", "SIM300"]

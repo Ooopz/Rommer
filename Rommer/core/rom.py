@@ -5,6 +5,7 @@ import shutil
 
 import fuzzywuzzy
 
+from .n64 import N64ByteSwapper
 from ..utils import file as fh
 from .parse_meta import DAT, RDB, SQLite, load_csv_pair
 from ..utils.spider import download_libretro_boxart
@@ -254,58 +255,27 @@ class GBC(BaseRom):
         self.is_sgb = data[0x0146] == 0x03
 
 
+class N64(BaseRom):
+    def to_z64(self, rom_path: str, rom_type: str):
+        base, file = os.path.split(rom_path)
+        file, _ = os.path.splitext(file)
+        output_path = os.path.join(base, f"{file}.{rom_type}")
+        n64bs = N64ByteSwapper(rom_path)
+        n64bs.save("z64", output_path)
+
+
 class PS(BaseRom):
     def get_serial(self):
         if self.data is None:
             self.data = self.get_data()
 
         regexp = b"[A-Z]{4}[_-][0-9]{3}[.][0-9]{2}|LSP[0-9]{5}[.][0-9]{3}"
-        alt_regexp = b"MEDAROT_R|DRAGONWARRIOR7_1|DRAGONWARRIOR7_2|ROAD WRITER|DEJIKURO|PACHIOKUN|SLPS_00137|LADIES\\.DA;1|BANNY\\.VDF;1|NP_ISHI0\\.SPL;1|G9_100L\\.DA;1|MYST\\.CCS;1|ATLUS\\.STR;1|ATKDAT\\.CFL;1|RX78\\.TMD;1|_HA30\\.STR;1|A_LOGO\\.STR;1|ENTSTAR\\.STR;1|KAMI00\\.BIN;1|DEGI3\\.STR;1|LOG\\.BAK;1|WIN_FNT2\\.BIN;1|PACHI2BG\\.TIM;1|RDATWI\\.BIN;1|AH1MAP\\.MAP;1|TORNYA\\.TPC;1|EPI_MCH\\.STR;1|H_TAISOH\\.VHB;1|OBJ\\.RRO;1|VTENNIS\\.STR;1|QUE184\\.TIM;1|GOACC\\.TIM;1|OPENXA\\.STR;1"
-
-        alt_lable_map = {
-            "MEDAROT_R": "SLPS_024.14",
-            "DRAGONWARRIOR7_1": "SLUS_012.06",
-            "DRAGONWARRIOR7_2": "SLUS_013.46",
-            "ROAD WRITER": "907127.001",
-            "DEJIKURO": "SLPS_005.49",
-            "PACHIOKUN": "SLPS_000.37",
-            "SLPS_00137": "SLPS_001.37",
-            "LADIES.DA;1": "SLPS_000.23",
-            "BANNY.VDF;1": "SLPS_000.04",
-            "NP_ISHI0.SPL;1": "SLPS_001.13",
-            "G9_100L.DA;1": "SLPS_000.38",
-            "MYST.CCS;1": "SLPS_000.24",
-            "ATLUS.STR;1": "SLPS_001.04",
-            "ATKDAT.CFL;1": "SCPS_100.02",
-            "RX78.TMD;1": "SLPS_000.35",
-            "_HA30.STR;1": "SCPS_100.16",
-            "A_LOGO.STR;1": "SLPS_000.85",
-            "ENTSTAR.STR;1": "SLPS_000.22",
-            "KAMI00.BIN;1": "SLPS_000.89",
-            "LOG.BAK;1": "SLPS_000.51",
-            "WIN_FNT2.BIN;1": "SLPS_000.90",
-            "PACHI2BG.TIM;1": "SLPS_000.21",
-            "RDATWI.BIN;1": "SLPS_000.37",
-            "AH1MAP.MAP;1": "SLPS_000.60",
-            "TORNYA.TPC;1": "SLPS_000.92",
-            "EPI_MCH.STR;1": "SCPS_100.09",
-            "OBJ.RRO;1": "SLPS_000.01",
-            "VTENNIS.STR;1": "SLPS_001.03",
-            "QUE184.TIM;1": "SLPS_000.07",
-            "GOACC.TIM;1": "SLPS_000.48",
-            "OPENXA.STR;1": "SLPS_000.65",
-        }
-        data = self.get_data()
-        serial = re.search(regexp, data)
+        serial = re.search(regexp, self.data)
         if serial:
             serial = serial.group(0).decode("utf-8")
-        else:
-            serial = re.search(alt_regexp, data)
-            if serial:
-                serial = serial.group(0).decode("utf-8")
-                serial = alt_lable_map.get(serial)
-        if serial:
             serial = serial.replace("_", "").replace(".", "").replace("-", "")
             serial = serial[:4] + "-" + serial[4:]
-        self.serial = serial
-        print(f"Serial for {self.name} is {self.serial}.")
+            self.serial = serial
+            print(f"Serial for {self.name} is {self.serial}.")
+        else:
+            print(f"Serial for {self.name} not found.")

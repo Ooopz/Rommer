@@ -1,4 +1,5 @@
 import csv
+import configparser
 import xml.etree.ElementTree as ET
 
 from ..utils.constants import RDB_TYPE_MAP, OPENVGDB_CONSOLE_MAP
@@ -12,7 +13,7 @@ class RDB:
     def __init__(self, rdb_fp):
         self.data = None
         self.maxlen = 0
-        self.parsed_data = []
+        self.parsed_data = {}
         self.expect_num = 0
 
         self.rdb_fp = rdb_fp
@@ -105,7 +106,7 @@ class RDB:
             _, self.expect_num = get_int(p)
 
         # filter useless data
-        self.parsed_data = [r for r in res if "name" in r]
+        self.parsed_data = {r["name"]: r for r in res if "name" in r}
 
 
 class DAT:
@@ -115,20 +116,14 @@ class DAT:
     """
 
     def __init__(self, dat_fp):
-        self.data = None
-        self.parsed_data = []
+        self.parsed_data = {}
         self.header = {}
 
         self.dat_fp = dat_fp
-        self.load_dat()
         self.parse_dat()
 
-    def load_dat(self):
-        with open(self.dat_fp, "rb") as f:
-            self.data = f.read()
-
     def parse_dat(self):
-        tree = ET.parse(self.data)
+        tree = ET.parse(self.dat_fp)
         root = tree.getroot()
 
         # parse header
@@ -138,19 +133,18 @@ class DAT:
                 self.header[child.tag] = child.text
 
         # parse games
-        for _game in root.findall("game"):
+        for game in root.findall("game"):
             meta = {}
-            meta.update(_game.attrib)
-            for child in _game:
+            meta.update(game.attrib)
+            for child in game:
                 if child.tag == "rom":
                     child.attrib["rom_name"] = child.attrib.pop("name")
                     meta.update(child.attrib)
                 else:
                     meta[child.tag] = child.text
-            self.parsed_data.append(meta)
 
-        # filter useless data
-        self.parsed_data = [r for r in self.parsed_data if "name" in r]
+            if "name" in meta:
+                self.parsed_data[meta["name"]] = meta
 
 
 class SQLite:
@@ -162,7 +156,7 @@ class SQLite:
         self.db_fp = db_fp
         self.conn = None
         self.cursor = None
-        self.parsed_data = []
+        self.parsed_data = {}
 
         self.connect()
         self.parse()
@@ -216,12 +210,43 @@ class SQLite:
         rows = self.cursor.fetchall()
         columns = [name[0] for name in self.cursor.description]
         parsed_data = [dict(zip(columns, row)) for row in rows]
-        for r in parsed_data:
-            r["console_type"] = OPENVGDB_CONSOLE_MAP.get(r["console_type"], None)
-            self.parsed_data.append(r)
+        for meta in parsed_data:
+            meta["console_type"] = OPENVGDB_CONSOLE_MAP.get(meta["console_type"], None)
+            if "name" in meta:
+                self.parsed_data[meta["name"]] = meta
 
-        # filter useless data
-        self.parsed_data = [r for r in self.parsed_data if "name" in r]
+
+class MAME:
+    """For MAME XML file
+    https://github.com/mamedev/mame
+    """
+
+    def __init__(self, dat_fp):
+        self.parsed_data = {}
+
+        self.dat_fp = dat_fp
+        self.parse_dat()
+
+    def parse_dat(self):
+        context = ET.iterparse(self.dat_fp, events=("start",))
+        next(context)  # skip root
+        meta = {}
+        tags = ["description", "year", "manufacturer"]
+        for _, elem in context:
+            if elem.tag == "machine":
+                self.parsed_data[meta["name"]] = meta
+                meta = {}
+                meta.update(elem.attrib)
+            elif elem.tag in tags:
+                meta[elem.tag] = elem.text
+
+    def parse_ini_file(self, ini_fp, key):
+        config = configparser.ConfigParser(allow_no_value=True, strict=False)
+        config.read(ini_fp, encoding="utf-8")
+        for section in config.sections():
+            for name, _ in config.items(section):
+                if name in self.parsed_data:
+                    self.parsed_data[name][key] = section
 
 
 def load_csv_pair(file_path):

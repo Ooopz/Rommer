@@ -21,14 +21,8 @@ class RomSet:
     def add_metas(self, meta_path):
         if meta_path.endswith(".rdb"):
             meta = RDB(meta_path)
-            for g in meta.parsed_data:
-                g["console_type"] = self.console_type
-                self.metas[g["name"]] = g
         elif meta_path.endswith(".dat"):
             meta = DAT(meta_path)
-            for g in meta.parsed_data:
-                g["console_type"] = self.console_type
-                self.metas[g["name"]] = g
         elif meta_path.endswith(".sqlite"):
             meta = SQLite(meta_path)  # allredy have console_type
             for g in meta.parsed_data:
@@ -48,38 +42,16 @@ class RomSet:
                     self.add_rom(os.path.join(r, file))
         print(f"Added {len(self.roms)} roms.")
 
-    def set_std_name_for_rom(self, namemap_path):
-        name_map = load_csv_pair(namemap_path)
+    def set_attr_for_roms(self, map_fp, attr_name):
         count = 0
-        for name, std_name in name_map.items():
+        attr_map = load_csv_pair(map_fp)
+        for name, value in attr_map.items():
             for rom_name, rom in self.roms.items():
                 if name == rom.name or name == rom.std_name or name == rom.alt_name:
-                    self.roms[rom_name].std_name = std_name
+                    self.roms[rom_name].__setattr__(attr_name, value)
                     count += 1
                     break
-        print(f"Set {count} std names.")
-
-    def set_alt_name_for_rom(self, namemap_path):
-        count = 0
-        name_map = load_csv_pair(namemap_path)
-        for name, alt_name in name_map.items():
-            for rom_name, rom in self.roms.items():
-                if name == rom.name or name == rom.std_name or name == rom.alt_name:
-                    self.roms[rom_name].alt_name = alt_name
-                    count += 1
-                    break
-        print(f"Set {count} alt names.")
-
-    def set_serial_for_rom(self, serialmap_path):
-        count = 0
-        serial_map = load_csv_pair(serialmap_path)
-        for name, serial in serial_map.items():
-            for rom_name, rom in self.roms.items():
-                if name == rom.name or name == rom.std_name or name == rom.alt_name:
-                    self.roms[rom_name].serial = serial
-                    count += 1
-                    break
-        print(f"Set {count} serials.")
+        print(f"Set {count} roms.")
 
     def exact_match(self, rom, meta):
         return any(
@@ -95,8 +67,8 @@ class RomSet:
             ]
         )
 
-    def fuzzy_match(self, rom, metas):
-        matched, score = fuzzywuzzy.process.extractOne(rom.name, metas)
+    def fuzzy_match(self, src, dsts):
+        matched, score = fuzzywuzzy.process.extractOne(src, dsts)
         if score > 95:
             return matched
 
@@ -113,26 +85,37 @@ class RomSet:
         meta_names = [meta["name"] for meta in self.metas.values()]
         for rom in self.roms:
             if use_hash:
-                self.roms[rom].calc_hash()
+                self.roms[rom].get_hash()
             if use_serial:
                 self.roms[rom].get_serial()
             for meta in self.metas.values():
                 if self.exact_match(self.roms[rom], meta):
-                    self.roms[rom].set_meta(meta)
+                    self.roms[rom].__setattr__("meta", meta)
                     success += 1
                     self.match_success_list.append(rom)
                     break
             else:
                 matched = self.fuzzy_match(self.roms[rom], meta_names)
                 if matched:
-                    self.roms[rom].set_meta(self.metas[matched])
+                    self.roms[rom].__setattr__("meta", self.metas[matched])
                     success += 1
                     self.match_success_list.append(rom)
                 else:
                     self.match_failed_list.append(rom)
-            self.roms[rom].clean_data()
 
         print(f"Matched {success} / {len(self.roms)} roms.")
+
+    def filter_remove_meta(self, key, value):
+        self.roms = {k: v for k, v in self.roms.items() if v.meta[key] != value}
+
+    def filter_keep_meta(self, key, value):
+        self.roms = {k: v for k, v in self.roms.items() if v.meta[key] == value}
+
+    def filter_gt_meta(self, key, value):
+        self.roms = {k: v for k, v in self.roms.items() if v.meta[key] > value}
+
+    def filter_lt_meta(self, key, value):
+        self.roms = {k: v for k, v in self.roms.items() if v.meta[key] < value}
 
     def filter_std_name(self):
         self.roms = {k: v for k, v in self.roms.items() if v.std_name is not None}
@@ -198,8 +181,17 @@ class BaseRom:
     def __str__(self) -> str:
         return f"{self.ctype.name} Rom: {self.name}"
 
+    def __setattr__(self, name: str, value: os.Any) -> None:
+        if name in ["std_name", "alt_name", "meta", "filetype", "sha1", "md5", "crc32", "serial", "data"]:
+            self.__dict__[name] = value
+        else:
+            raise AttributeError(f"Attribute {name} is not allowed to set.")
+
     def set_meta(self, meta):
         self.meta = meta
+
+    def set_alt_name(self, alt_name):
+        self.alt_name = alt_name
 
     def get_data(self):
         if fh.is_zip(self.rom_path):
@@ -212,7 +204,11 @@ class BaseRom:
             data = fh.load_bin(self.rom_path)
         return data
 
-    def calc_hash(self):
+    def get_hash(self):
+        if self.crc32 is None and self.md5 is None and self.sha1 is None:
+            self.gen_hash()
+
+    def gen_hash(self):
         if self.data is None:
             self.data = self.get_data()
         self.crc32 = fh.calc_crc32(self.data)
@@ -222,20 +218,21 @@ class BaseRom:
         print(f"Hash for {self.name} calculated.")
 
     def get_serial(self):
+        if self.serial is None:
+            self.gen_serial()
+
+    def gen_serial(self):
         pass
 
     def clean_data(self):
         self.data = None
-
-    def set_alt_name(self, alt_name):
-        self.alt_name = alt_name
 
 
 class GBC(BaseRom):
     def init(self):
         self.compatibility()
 
-    def get_serial(self):
+    def gen_serial(self):
         if self.data is None:
             self.data = self.get_data()
         self.serial = self.data[0x013F:0x0143].decode("utf-8")
@@ -265,7 +262,7 @@ class N64(BaseRom):
 
 
 class PS(BaseRom):
-    def get_serial(self):
+    def gen_serial(self):
         if self.data is None:
             self.data = self.get_data()
 
@@ -279,3 +276,7 @@ class PS(BaseRom):
             print(f"Serial for {self.name} is {self.serial}.")
         else:
             print(f"Serial for {self.name} not found.")
+
+
+class ARCADE(BaseRom):
+    pass

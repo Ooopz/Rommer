@@ -37,7 +37,6 @@ class ConsoleType(Enum):
     GBA = "GBA"
     NDS = "NDS"
     _3DS = "3DS"
-    NS = "NS"
     NES = "NES"
     SNES = "SNES"
     N64 = "N64"
@@ -111,13 +110,6 @@ class Language(Enum):
 RDB_CONSOLE_MAP = {
     # Arcade
     "FBNeo - Arcade Games": ConsoleType.ARCADE,
-    "MAME 2000": ConsoleType.ARCADE,
-    "MAME 2003-Plus": ConsoleType.ARCADE,
-    "MAME 2003": ConsoleType.ARCADE,
-    "MAME 2010": ConsoleType.ARCADE,
-    "MAME 2015": ConsoleType.ARCADE,
-    "MAME 2016": ConsoleType.ARCADE,
-    "MAME": ConsoleType.ARCADE,
     # Nintendo
     "Handheld Electronic Game": ConsoleType.GW,
     "Nintendo - Pokemon Mini": ConsoleType.PM,
@@ -126,18 +118,17 @@ RDB_CONSOLE_MAP = {
     "Nintendo - Game Boy Advance": ConsoleType.GBA,
     "Nintendo - Nintendo DS": ConsoleType.NDS,
     "Nintendo - Nintendo 3DS": ConsoleType._3DS,
-    "Nintendo - Nintendo Switch": ConsoleType.NS,
     "Nintendo - Nintendo Entertainment System": ConsoleType.NES,  # gen 3
     "Nintendo - Super Nintendo Entertainment System": ConsoleType.SNES,  # gen 4
     "Nintendo - Nintendo 64": ConsoleType.N64,  # gen 5
-    "Nintendo - Nintendo GameCube": ConsoleType.GC,  # gen 6
-    "Nintendo - Nintendo Wii": ConsoleType.WII,  # gen 7
+    "Nintendo - GameCube": ConsoleType.GC,  # gen 6
+    "Nintendo - Wii": ConsoleType.WII,  # gen 7
     "Nintendo - Nintendo Wii U": ConsoleType.WIIU,  # gen 8
     # Sony
-    "Sony - Sony PlayStation": ConsoleType.PS,  # gen 5
-    "Sony - Sony PlayStation 2": ConsoleType.PS2,  # gen 6
-    "Sony - Sony PlayStation Portable": ConsoleType.PSP,
-    "Sony - Sony PlayStation Vita": ConsoleType.PSV,
+    "Sony - PlayStation": ConsoleType.PS,  # gen 5
+    "Sony - PlayStation 2": ConsoleType.PS2,  # gen 6
+    "Sony - PlayStation Portable": ConsoleType.PSP,
+    "Sony - PlayStation Vita": ConsoleType.PSV,
     # Sega
     "Sega - Mega Drive - Genesis": ConsoleType.MD,  # gen 4
     "Sega - Saturn": ConsoleType.SS,  # gen 5

@@ -95,8 +95,9 @@ def filter_mac_files(files):
     return [file for file in files if "__MACOSX" not in file]
 
 
-def extract_zip(fp, dst, extend=None):
+def extract_zip(fp, dst, extend=None, assign=None):
     extend = [extend] if isinstance(extend, str) else extend
+    assign = [assign] if isinstance(assign, str) else assign
     with zipfile.ZipFile(fp, "r") as z:
         if extend:
             names = z.namelist()
@@ -104,6 +105,10 @@ def extract_zip(fp, dst, extend=None):
             filtered = [name for name in filtered for ext in extend if name.endswith(ext)]
             for file in filtered:
                 z.extract(file, dst)
+        elif assign:
+            for file in assign:
+                z.extract(file, dst)
+
         else:
             z.extractall(dst)
 

@@ -3,7 +3,7 @@ import re
 import sys
 import shutil
 
-import fuzzywuzzy
+from fuzzywuzzy import process
 
 from .n64 import N64ByteSwapper
 from ..utils import file as fh
@@ -20,9 +20,9 @@ class RomSet:
 
     def add_metas(self, meta_path):
         if meta_path.endswith(".rdb"):
-            meta = RDB(meta_path)
+            self.metas = RDB(meta_path).parsed_data
         elif meta_path.endswith(".dat"):
-            meta = DAT(meta_path)
+            self.metas = DAT(meta_path).parsed_data
         elif meta_path.endswith(".sqlite"):
             meta = SQLite(meta_path)  # allredy have console_type
             for g in meta.parsed_data:
@@ -68,7 +68,7 @@ class RomSet:
         )
 
     def fuzzy_match(self, src, dsts):
-        matched, score = fuzzywuzzy.process.extractOne(src, dsts)
+        matched, score = process.extractOne(src, dsts)
         if score > 95:
             return matched
 
@@ -95,7 +95,7 @@ class RomSet:
                     self.match_success_list.append(rom)
                     break
             else:
-                matched = self.fuzzy_match(self.roms[rom], meta_names)
+                matched = self.fuzzy_match(self.roms[rom].name, meta_names)
                 if matched:
                     self.roms[rom].__setattr__("meta", self.metas[matched])
                     success += 1
@@ -180,12 +180,6 @@ class BaseRom:
 
     def __str__(self) -> str:
         return f"{self.ctype.name} Rom: {self.name}"
-
-    def __setattr__(self, name: str, value: os.Any) -> None:
-        if name in ["std_name", "alt_name", "meta", "filetype", "sha1", "md5", "crc32", "serial", "data"]:
-            self.__dict__[name] = value
-        else:
-            raise AttributeError(f"Attribute {name} is not allowed to set.")
 
     def set_meta(self, meta):
         self.meta = meta

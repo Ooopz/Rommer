@@ -24,34 +24,35 @@ def download_bin_file(url, save_path):
 
 
 def clean_str(_str: str):
-    trans = str.maketrans("/\|<>:?*&", "_" * 9)
+    trans = str.maketrans(r"/\|<>:?*& ", "_" * 10)
     return _str.translate(trans)
 
 
-def download_libretro(url_template, name, console_type, save_path):
+def download_libretro_rdb(console_type, save_path):
+    console = INVERT_RDB_CONSOLE_MAP[console_type]
+    url = f"https://raw.githubusercontent.com/libretro/libretro-database/master/rdb/{console}.rdb"
+    return download_bin_file(url, save_path)
+
+
+def download_libretro_img(url_template, name, console_type, save_path):
     console = INVERT_RDB_CONSOLE_MAP[console_type]
     console_name = clean_str(console)
     url = url_template.format(console_name, name)
     return download_bin_file(url, save_path)
 
 
-download_libretro_rdb = partial(
-    download_libretro, "https://raw.githubusercontent.com/libretro/libretro-database/master/rdb/{}.rdb{}", ""
-)
-
-
 download_libretro_boxart = partial(
-    download_libretro, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Boxarts/{}.png"
+    download_libretro_img, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Boxarts/{}.png"
 )
 
 
 download_libretro_snap = partial(
-    download_libretro, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Snaps/{}.png"
+    download_libretro_img, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Snaps/{}.png"
 )
 
 
 download_libretro_title = partial(
-    download_libretro, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Titles/{}.png"
+    download_libretro_img, "https://raw.githubusercontent.com/libretro-thumbnails/{}/master/Named_Titles/{}.png"
 )
 
 

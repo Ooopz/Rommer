@@ -37,6 +37,7 @@ class ConsoleType(Enum):
     GBA = "GBA"
     NDS = "NDS"
     _3DS = "3DS"
+    FDS = "FDS"
     NES = "NES"
     SNES = "SNES"
     N64 = "N64"
@@ -51,12 +52,17 @@ class ConsoleType(Enum):
     PSV = "PSV"
 
     # Sega
+    SG1K = "SG1K"
+    MS = "MS"
     MD = "MD"
+    _32X = "32X"
+    MDCD = "MDCD"
     SS = "SS"
     DC = "DC"
     GG = "GG"
 
     # SNK
+    NGCD = "NGCD"
     NGP = "NGP"
     NGPC = "NGPC"
 
@@ -64,28 +70,27 @@ class ConsoleType(Enum):
     MSX = "MSX"
     MSX2 = "MSX2"
     XBOX = "XBOX"
-    X360 = "X360"
-    XONE = "XONE"
 
     # Atari
     A26 = "A26"
     A52 = "A52"
     A78 = "A78"
-    LYNX = "LYNX"
     JAG = "JAG"
+    JAGCD = "JAGCD"
+    LYNX = "LYNX"
 
     # Bandai
     WS = "WS"
     WSC = "WSC"
-
-    # 3DO
-    _3DO = "3DO"
 
     # NEC
     PCE = "PCE"
     PCECD = "PCECD"
     PCFX = "PCFX"
     SGFX = "SGFX"
+
+    # 3DO
+    _3DO = "3DO"
 
     OTHER = "OTHER"
 
@@ -118,6 +123,7 @@ RDB_CONSOLE_MAP = {
     "Nintendo - Game Boy Advance": ConsoleType.GBA,
     "Nintendo - Nintendo DS": ConsoleType.NDS,
     "Nintendo - Nintendo 3DS": ConsoleType._3DS,
+    "Nintendo - Family Computer Disk System": ConsoleType.FDS,  # gen 3
     "Nintendo - Nintendo Entertainment System": ConsoleType.NES,  # gen 3
     "Nintendo - Super Nintendo Entertainment System": ConsoleType.SNES,  # gen 4
     "Nintendo - Nintendo 64": ConsoleType.N64,  # gen 5
@@ -130,7 +136,11 @@ RDB_CONSOLE_MAP = {
     "Sony - PlayStation Portable": ConsoleType.PSP,
     "Sony - PlayStation Vita": ConsoleType.PSV,
     # Sega
+    "Sega - SG-1000": ConsoleType.SG1K,
+    "Sega - Master System - Mark III": ConsoleType.MS,
     "Sega - Mega Drive - Genesis": ConsoleType.MD,  # gen 4
+    "Sega - Mega-CD - Sega CD": ConsoleType.MDCD,
+    "Sega - 32X": ConsoleType._32X,
     "Sega - Saturn": ConsoleType.SS,  # gen 5
     "Sega - Dreamcast": ConsoleType.DC,  # gen 6
     "Sega - Game Gear": ConsoleType.GG,
@@ -153,6 +163,7 @@ RDB_CONSOLE_MAP = {
     "NEC - PC-FX": ConsoleType.PCFX,
     "NEC - PC Engine SuperGrafx": ConsoleType.SGFX,
     # SNK
+    "SNK - Neo Geo CD": ConsoleType.NGCD,
     "SNK - Neo Geo Pocket": ConsoleType.NGP,
     "SNK - Neo Geo Pocket Color": ConsoleType.NGPC,
 }
@@ -163,29 +174,28 @@ OPENVGDB_CONSOLE_MAP = {
     # Arcade
     "Arcade": ConsoleType.ARCADE,
     # Nintendo
-    "Nintendo Famicom Disk System": ConsoleType.NES,
     "Nintendo Game Boy": ConsoleType.GB,
-    "Nintendo Game Boy Advance": ConsoleType.GBA,
     "Nintendo Game Boy Color": ConsoleType.GBC,
-    "Nintendo GameCube": ConsoleType.GC,
-    "Nintendo 64": ConsoleType.N64,
+    "Nintendo Game Boy Advance": ConsoleType.GBA,
     "Nintendo DS": ConsoleType.NDS,
     "Nintendo Entertainment System": ConsoleType.NES,
+    "Nintendo Famicom Disk System": ConsoleType.FDS,
     "Nintendo Super Nintendo Entertainment System": ConsoleType.SNES,
-    "Nintendo Virtual Boy": ConsoleType.OTHER,
+    "Nintendo 64": ConsoleType.N64,
+    "Nintendo GameCube": ConsoleType.GC,
     "Nintendo Wii": ConsoleType.WII,
-    "3DO Interactive Multiplayer": ConsoleType._3DO,
+    "Nintendo Virtual Boy": ConsoleType.OTHER,
     # Sony
     "Sony PlayStation": ConsoleType.PS,
     "Sony PlayStation Portable": ConsoleType.PSP,
     # Sega
-    "Sega 32X": ConsoleType.OTHER,
-    "Sega Game Gear": ConsoleType.GG,
-    "Sega Master System": ConsoleType.OTHER,
-    "Sega CD/Mega-CD": ConsoleType.OTHER,
+    "Sega SG-1000": ConsoleType.SG1K,
+    "Sega Master System": ConsoleType.MS,
     "Sega Genesis/Mega Drive": ConsoleType.MD,
+    "Sega 32X": ConsoleType._32X,
+    "Sega CD/Mega-CD": ConsoleType.MDCD,
     "Sega Saturn": ConsoleType.SS,
-    "Sega SG-1000": ConsoleType.OTHER,
+    "Sega Game Gear": ConsoleType.GG,
     # Bandai
     "Bandai WonderSwan": ConsoleType.WS,
     "Bandai WonderSwan Color": ConsoleType.WSC,
@@ -198,7 +208,7 @@ OPENVGDB_CONSOLE_MAP = {
     "Atari 7800": ConsoleType.A78,
     "Atari Lynx": ConsoleType.LYNX,
     "Atari Jaguar": ConsoleType.JAG,
-    "Atari Jaguar CD": ConsoleType.JAG,
+    "Atari Jaguar CD": ConsoleType.JAGCD,
     # NEC
     "NEC PC Engine/TurboGrafx-16": ConsoleType.PCE,
     "NEC PC Engine CD/TurboGrafx-CD": ConsoleType.PCECD,
@@ -208,6 +218,7 @@ OPENVGDB_CONSOLE_MAP = {
     "SNK Neo Geo Pocket": ConsoleType.NGP,
     "SNK Neo Geo Pocket Color": ConsoleType.NGPC,
     # Other
+    "3DO Interactive Multiplayer": ConsoleType._3DO,
     "Coleco ColecoVision": ConsoleType.OTHER,
     "GCE Vectrex": ConsoleType.OTHER,
     "Intellivision": ConsoleType.OTHER,

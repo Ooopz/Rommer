@@ -76,6 +76,31 @@ def download_mame(save_path, version="0269"):
         download_bin_file(url, save_fp)
 
 
+def download_redump(save_path):
+    urls = [
+        ("http://redump.org/datfile/psp/", "psp.zip"),
+        ("http://redump.org/datfile/psx/", "psx.zip"),
+        ("http://redump.org/datfile/ps2/", "ps2.zip"),
+        ("http://redump.org/datfile/ss/", "ss.zip"),
+        ("http://redump.org/datfile/dc/", "dc.zip"),
+        ("http://redump.org/datfile/wii/", "wii.zip"),
+        ("http://redump.org/datfile/gc/", "gc.zip"),
+        ("http://redump.org/datfile/ngcd/", "ngcd.zip"),
+        ("http://redump.org/datfile/ajcd/", "ajcd.zip"),
+        ("http://redump.org/datfile/pce/", "pcecd.zip"),
+        ("http://redump.org/datfile/pc-fx/", "pcfx.zip"),
+        ("http://redump.org/datfile/mcd/", "mdcd.zip"),
+    ]
+
+    for url, name in urls:
+        save_fp = os.path.join(save_path, name)
+        download_bin_file(url, save_fp)
+
+
+def download_wikipedia():
+    pass
+
+
 def prepare_meta(save_path, openvgdb_version="v29.0", mame_version="0269", overwrite=False):
     for console, name in INVERT_RDB_CONSOLE_MAP.items():
         dat_fp = os.path.join(save_path, "rdb", f"{name}.rdb")
@@ -99,3 +124,7 @@ def prepare_meta(save_path, openvgdb_version="v29.0", mame_version="0269", overw
     for r, _, f in os.walk(mame_fp):
         for file in f:
             shutil.move(os.path.join(r, file), os.path.join(mame_fp, file))
+
+    redump_fp = os.path.join(save_path, "redump")
+    if overwrite or not os.path.exists(redump_fp):
+        download_redump(redump_fp)

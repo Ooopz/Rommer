@@ -230,13 +230,11 @@ class MAME:
     def parse_dat(self):
         context = ET.iterparse(self.dat_fp, events=("start",))
         next(context)  # skip root
-        meta = {}
         tags = ["description", "year", "manufacturer"]
         for _, elem in context:
             if elem.tag == "machine":
+                meta = elem.attrib
                 self.parsed_data[meta["name"]] = meta
-                meta = {}
-                meta.update(elem.attrib)
             elif elem.tag in tags:
                 meta[elem.tag] = elem.text
 

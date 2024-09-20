@@ -67,12 +67,14 @@ class RomSet:
             ]
         )
 
-    def fuzzy_match(self, src, dsts):
-        matched, score = process.extractOne(src, dsts)
-        if score > 95:
-            return matched
+    def fuzzy_match(self, rom, dsts):
+        for name in [rom.name, rom.std_name, rom.alt_name]:
+            matched, score = process.extractOne(name, dsts)
+            if score > 95:
+                return matched
 
     def match(self, use_hash=False, use_serial=False):
+        # TODO: add match detail
         if len(self.roms) == 0:
             print("No roms.")
             return
@@ -83,7 +85,7 @@ class RomSet:
         self.match_success_list = []
         self.match_failed_list = []
         meta_names = [meta["name"] for meta in self.metas.values()]
-        for rom in self.roms:
+        for i, rom in enumerate(self.roms):
             if use_hash:
                 self.roms[rom].get_hash()
             if use_serial:
@@ -93,15 +95,18 @@ class RomSet:
                     self.roms[rom].__setattr__("meta", meta)
                     success += 1
                     self.match_success_list.append(rom)
+                    print(f"#{i+1} {rom} exact matche meta with {meta['name']}.")
                     break
             else:
-                matched = self.fuzzy_match(self.roms[rom].name, meta_names)
+                matched = self.fuzzy_match(self.roms[rom], meta_names)
                 if matched:
                     self.roms[rom].__setattr__("meta", self.metas[matched])
                     success += 1
                     self.match_success_list.append(rom)
+                    print(f"#{i+1} {rom} fuzzy matche meta with {self.metas[matched]['name']}.")
                 else:
                     self.match_failed_list.append(rom)
+                    print(f"#{i+1} {rom} matche failed.")
 
         print(f"Matched {success} / {len(self.roms)} roms.")
 
@@ -208,8 +213,6 @@ class BaseRom:
         self.crc32 = fh.calc_crc32(self.data)
         self.md5 = fh.calc_md5(self.data)
         self.sha1 = fh.calc_sha1(self.data)
-
-        print(f"Hash for {self.name} calculated.")
 
     def get_serial(self):
         if self.serial is None:

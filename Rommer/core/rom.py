@@ -69,9 +69,10 @@ class RomSet:
 
     def fuzzy_match(self, rom, dsts):
         for name in [rom.name, rom.std_name, rom.alt_name]:
-            matched, score = process.extractOne(name, dsts)
-            if score > 95:
-                return matched
+            if name is not None:
+                matched, score = process.extractOne(name, dsts)
+                if score > 95:
+                    return matched
 
     def match(self, use_hash=False, use_serial=False):
         # TODO: add match detail
@@ -93,6 +94,7 @@ class RomSet:
             for meta in self.metas.values():
                 if self.exact_match(self.roms[rom], meta):
                     self.roms[rom].__setattr__("meta", meta)
+                    self.roms[rom].__setattr__("std_name", meta['name'])
                     success += 1
                     self.match_success_list.append(rom)
                     print(f"#{i+1} {rom} exact matche meta with {meta['name']}.")

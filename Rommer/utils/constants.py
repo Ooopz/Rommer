@@ -96,12 +96,13 @@ class ConsoleType(Enum):
 
 
 class Region(Enum):
-    CN = "CN"
-    JP = "JP"
-    US = "US"
-    EU = "EU"
-    WORLD = "WORLD"
-    OTH = "OTH"
+    C = "C"
+    J = "J"
+    K = "K"
+    U = "U"
+    E = "E"
+    W = "W"
+    O = "O"
 
 
 class Language(Enum):

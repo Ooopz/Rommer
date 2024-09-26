@@ -232,7 +232,7 @@ class MAME:
         next(context)  # skip root
         tags = ["description", "year", "manufacturer"]
         for _, elem in context:
-            if elem.tag == "machine":
+            if elem.tag in ["machine", "game"]:
                 meta = elem.attrib
                 self.parsed_data[meta["name"]] = meta
             elif elem.tag in tags:
@@ -245,17 +245,3 @@ class MAME:
             for name, _ in config.items(section):
                 if name in self.parsed_data:
                     self.parsed_data[name][key] = section
-
-
-def load_csv_pair(file_path):
-    result_dict = {}
-    with open(file_path, encoding="utf-8") as file:
-        csv_reader = csv.reader(file)
-        for i, row in enumerate(csv_reader):
-            if i == 0:
-                continue
-            if len(row) >= 2:  # 确保每行至少有两列
-                key = row[0]
-                value = row[1]
-                result_dict[key] = value
-    return result_dict

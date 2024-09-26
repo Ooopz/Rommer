@@ -28,6 +28,11 @@ def clean_str(_str: str):
     return _str.translate(trans)
 
 
+def clean_name(_str: str):
+    trans = str.maketrans(r"/\|<>:?*&", "_" * 9)
+    return _str.translate(trans)
+
+
 def download_libretro_rdb(console_type, save_path):
     console = INVERT_RDB_CONSOLE_MAP[console_type]
     url = f"https://raw.githubusercontent.com/libretro/libretro-database/master/rdb/{console}.rdb"
@@ -37,7 +42,7 @@ def download_libretro_rdb(console_type, save_path):
 def download_libretro_img(url_template, name, console_type, save_path):
     console = INVERT_RDB_CONSOLE_MAP[console_type]
     console_name = clean_str(console)
-    url = url_template.format(console_name, name)
+    url = url_template.format(console_name, clean_name(name))
     return download_bin_file(url, save_path)
 
 

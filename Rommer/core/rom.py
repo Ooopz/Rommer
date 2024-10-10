@@ -40,7 +40,7 @@ class RomSet:
     def add_roms(self, folder_paths, valid_extensions):
         for r, _, f in os.walk(folder_paths):
             for file in f:
-                if file.split(".")[-1] in valid_extensions:
+                if file.split(".")[-1].lower() in valid_extensions:
                     self.add_rom(os.path.join(r, file))
         print(f"Added {len(self.roms)} roms.")
 
@@ -61,9 +61,9 @@ class RomSet:
     def hash_match(self, rom, meta):
         return any(
             [
-                rom.sha1 == meta.get("sha1", " "),
-                rom.md5 == meta.get("md5", " "),
-                rom.crc32 == meta.get("crc32", " "),
+                rom.sha1 == meta.get("sha1", " ").upper(),
+                rom.md5 == meta.get("md5", " ").upper(),
+                rom.crc32 == meta.get("crc32", " ").upper(),
             ]
         )
 
@@ -139,6 +139,10 @@ class RomSet:
             info["name"] = rom.name
             info["std_name"] = rom.std_name
             info["alt_name"] = rom.alt_name
+            info["sha1"] = rom.sha1
+            info["md5"] = rom.md5
+            info["crc32"] = rom.crc32
+            info["serial"] = rom.serial
             meta = rom.meta
             if meta is not None:
                 for k, v in meta.items():
@@ -263,8 +267,12 @@ class GBC(BaseRom):
     def gen_serial(self):
         if self.data is None:
             self.data = self.get_data()
-        self.serial = self.data[0x013F:0x0143].decode("utf-8")
-        print(f"Serial for {self.name} is {self.serial}.")
+        try:
+            self.serial = self.data[0x013F:0x0143].decode("utf-8")
+            print(f"Serial for {self.name} is {self.serial}.")
+        except UnicodeDecodeError:
+            self.serial = None
+            print(f"Serial for {self.name} not found.")
 
     def compatibility(self):
         data = self.get_data()
@@ -278,6 +286,19 @@ class GBC(BaseRom):
             self.is_gb = True
             self.is_gbc = False
         self.is_sgb = data[0x0146] == 0x03
+
+
+class GBA(BaseRom):
+    def gen_serial(self):
+        if self.data is None:
+            self.data = self.get_data()
+        try:
+
+            self.serial = self.data[0xAC:0xB0].decode("utf-8")
+            print(f"Serial for {self.name} is {self.serial}.")
+        except UnicodeDecodeError:
+            self.serial = None
+            print(f"Serial for {self.name} not found.")
 
 
 class N64(BaseRom):
